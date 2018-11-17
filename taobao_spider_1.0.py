@@ -6,6 +6,7 @@ import time
 import re
 from selenium.webdriver.common.action_chains import ActionChains
 from multiprocessing import Process
+from timeou_test import timeoutfunc
 
 class Taobao_spider():
     def __init__(self, start_page, end_page):
@@ -63,18 +64,33 @@ class Taobao_spider():
         for goods in range(goods_list[:20].__len__()):
             self.driver.execute_script('document.getElementsByClassName("J_ItemPic img")[%s].click()'%goods)
             handles = self.driver.window_handles
+            origin_window = self.driver.current_window_handle
             for i in handles:
                 if i != self.driver.current_window_handle:
                     print('切换窗口')
                     self.driver.switch_to.window(i)
-                    text = self.driver.page_source
+                    print('进入加载页面')
+                    pythoncode = 'self.driver.page_source'
+                    text = timeoutfunc(10, pythoncode, self)
+                    if text:
+                        print('加载完毕')
+                        self.parse_page(text)
+                        self.driver.close()
+                        if self.driver.window_handles.__len__() == 1:
+                            break
+                    else:
+                        print('加载失败')
+                        # self.driver.refresh()
+                        # pythoncode = 'self.driver.page_source'
+                        # text = timeoutfunc(10, pythoncode, self)
+
+                        break
                     # try:
-                    self.parse_page(text)
+                    # self.parse_page(text)
                     # except Exception as e:
                     #     print(e)
-                    break
-            self.driver.close()
-            self.driver.switch_to.window(handles[0])
+                    # break
+            self.driver.switch_to.window(origin_window)
         # except:
         #     self.get_detail_page(goods_list)
 
@@ -126,7 +142,7 @@ class Taobao_spider():
                 print('需要每次点击之前都重新定位')
         li_xpath_str = '//ul[@class="tm-clear J_TSaleProp tb-img"]//li'
         li_ele_list = self.driver.find_elements_by_xpath(li_xpath_str)
-                #showif标识是否全部商品全都在页面上展示了出来
+        #showif标识是否全部商品全都在页面上展示了出来
         show_if = True
         should_click = True
         for li_ele in li_ele_list:
