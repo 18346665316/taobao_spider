@@ -1,4 +1,3 @@
-
 # -*- coding:utf-8 -*-
 from selenium import webdriver
 import json
@@ -22,12 +21,11 @@ class Taobao_spider():
         self.driver.execute_script(script)
         self.page_num = self.start_page
         self.f_1 = open('taobao.txt', 'a', encoding='utf-8')
-        time.sleep(5)
+        time.sleep(7)
         input_ele = self.driver.find_element_by_xpath('//*[@id="q"]')
         input_ele.send_keys('T恤')
         submit_btn = self.driver.find_elements_by_class_name('icon-btn-search')[0]
         submit_btn.click()
-        self.driver.stop_client()
 
     def get_firstpage_good_list(self):
         goods_list = self.driver.find_elements_by_xpath("//img[@class='J_ItemPic img']")
@@ -236,7 +234,7 @@ def main():
         for j in range(15,1,-1):
             print('等待', j, '秒')
             time.sleep(1)
-run_spider(2,3)
+run_spider(4,5)
 
 
 
