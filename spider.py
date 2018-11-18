@@ -1,5 +1,7 @@
+#-*-coding:utf-8 -*-
 #对taobao_spider_1.0 文件进行整理封装,注释的添加等等
 from selenium import webdriver
+import selenium
 import json
 import time
 import re
@@ -55,6 +57,43 @@ class Taobao_spider():
         goods_count = self.driver.find_elements_by_xpath("//img[@class='J_ItemPic img']").__len__()
         return [i for i in range(goods_count)]
 
+    # def get_detail_page(self, goods_list):
+    #     #进入详情页面, 对详情页面数据进行解析
+    #     print('进入get_detail_page函数')
+    #     # 创立一个列表,为了对timeout时间内加载未成功的页面进行重新加载
+    #     goods_load_failed_list = list()
+    #     origin_window = self.driver.current_window_handle
+    #     for goods in goods_list[:10]:
+    #         #遍历点击列表页面的每个商品
+    #         self.driver.execute_script('document.getElementsByClassName("J_ItemPic img")[%s].click()' % goods)
+    #         #获取当前浏览器所有打开的窗口列表
+    #         handles = self.driver.window_handles
+    #         #origin_window列表页面的窗口
+    #         for i in handles:
+    #             #进行判断是否为详情页面
+    #             if i != origin_window:
+    #                 print('切换窗口')
+    #                 #把webdriver 切换到详情页面
+    #                 self.driver.switch_to.window(i)
+    #                 print('进入加载页面')
+    #                 pythoncode = 'self.driver.page_source'
+    #                 #调用超时函数
+    #                 text = timeoutfunc(10, pythoncode, self)
+    #                 if text:
+    #                     # 页面正常时间内加载成功
+    #                     print('加载完毕')
+    #                    #调用数据解析提取函数进行数据的解析提取
+    #                     self.parse_page(text)
+    #                     #提取成功关闭当前窗口
+    #                     self.driver.close()
+    #                 else:
+    #                     print('加载失败')
+    #                     #timeout 时间内加载未完成,将商品序号加入到失败的队列
+    #                     goods_load_failed_list.append(goods)
+    #                     self.driver.close()
+    #                     print('成功关闭')
+    #         self.driver.switch_to.window(origin_window)
+    #     self.get_detail_page(goods_load_failed_list)
     def get_detail_page(self, goods_list):
         #进入详情页面, 对详情页面数据进行解析
         print('进入get_detail_page函数')
@@ -75,8 +114,8 @@ class Taobao_spider():
                     self.driver.switch_to.window(i)
                     print('进入加载页面')
                     pythoncode = 'self.driver.page_source'
-                    #调用超时函数
-                    text = timeoutfunc(10, pythoncode, self)
+                    #调用超时函数driver.stop_client()
+                    text = timeoutfunc(7, pythoncode, self)
                     if text:
                         # 页面正常时间内加载成功
                         print('加载完毕')
@@ -89,10 +128,12 @@ class Taobao_spider():
                         #timeout 时间内加载未完成,将商品序号加入到失败的队列
                         goods_load_failed_list.append(goods)
                         self.driver.close()
+                        # time.sleep(1)
+
                         print('成功关闭')
             self.driver.switch_to.window(origin_window)
-        self.get_detail_page(goods_load_failed_list)
-
+        if goods_load_failed_list != []:
+            self.get_detail_page(goods_load_failed_list)
     def parse_page(self, text):
         print('进去解析页面parse_page')
         json_text = re.search(r"TShop.Setup\(([^\<]*)", text, re.S)
@@ -182,6 +223,7 @@ class Taobao_spider():
 
     def start(self):
         #对页码进行遍历, 获取每一页的商品数量,并调用解析函数＜＜＜
+        self.driver.set_page_load_timeout(8)
         for i in range(self.start_page, self.end_page+1):
             print('跳转到第', i, '页')
             input_ele = self.driver.find_element_by_xpath('//input[@aria-label="页码输入框"]')
@@ -198,7 +240,10 @@ class Taobao_spider():
 
 def run_spider(start_page, end_page):
     tao_spider = Taobao_spider(start_page, end_page, keywords='T恤')
-    tao_spider.run()
+    try:
+        tao_spider.run()
+    except selenium.common.exceptions.TimeoutException:
+        print('页面加载超时')
 
 def main():
     run_spider(5,6)
