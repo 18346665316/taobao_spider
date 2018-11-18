@@ -32,9 +32,9 @@ class Taobao_spider():
         self.f_1 = open('taobao.txt', 'a', encoding='utf-8')
         #调用扫淘宝二维码登陆函数
         try:
-            self.login_taobao
+            self.login_taobao()
         except:
-            raise Exception('扫码失败')
+            print('扫码超时, 退出程序')
         self.send_keywords()
     @retry(tries=3)
     def login_taobao(self):
@@ -60,16 +60,16 @@ class Taobao_spider():
         print('进入get_detail_page函数')
         # 创立一个列表,为了对timeout时间内加载未成功的页面进行重新加载
         goods_load_failed_list = list()
+        origin_window = self.driver.current_window_handle
         for goods in goods_list[:10]:
             #遍历点击列表页面的每个商品
             self.driver.execute_script('document.getElementsByClassName("J_ItemPic img")[%s].click()' % goods)
             #获取当前浏览器所有打开的窗口列表
             handles = self.driver.window_handles
             #origin_window列表页面的窗口
-            origin_window = self.driver.current_window_handle
             for i in handles:
                 #进行判断是否为详情页面
-                if i != self.driver.current_window_handle:
+                if i != origin_window:
                     print('切换窗口')
                     #把webdriver 切换到详情页面
                     self.driver.switch_to.window(i)
@@ -89,8 +89,9 @@ class Taobao_spider():
                         #timeout 时间内加载未完成,将商品序号加入到失败的队列
                         goods_load_failed_list.append(goods)
                         self.driver.close()
+                        print('成功关闭')
             self.driver.switch_to.window(origin_window)
-            self.get_detail_page(goods_load_failed_list)
+        self.get_detail_page(goods_load_failed_list)
 
     def parse_page(self, text):
         print('进去解析页面parse_page')
@@ -98,48 +99,68 @@ class Taobao_spider():
         #判断是否符合正则, 符合则该商品属于天猫商城商品,反之为淘宝商城商品
         if json_text is None:
             # raise Exception('正则匹配错误, 页面为淘宝页面')
-            return print('页面为淘宝页面')
+            print('页面为淘宝页面')
             return
         json_text = json_text.group(1)[:-6].strip()[:-2].strip()
+        #将匹配到的json转换为python的字典
         dict_new = json.loads(json_text)
-        #调用函数获取到需要的ｄａｔａ
+        #调用函数获取到需要的data
         parse_data = self.get_discount_price(dict_new)
+        print(parse_data, file=self.f)
+
     def get_discount_price(self, dict_new):
         # 以下代码为获取促销价格
-        # 第一次进入详情页面展示出来的促销价格
+        #定义sign, 用来判断商品是否有促销价, 不同的sku之间价格是否会发生变化, 页面是否有隐藏商品.判断每个ｓｋｕ是否需要点击
+        have_discount = True
+        is_pricechange_of_spu = True
+        is_all_show = True
+        should_click = True
+        # 第一次进入详情页面展示出来的促销价格, 少数商品并没有促销价, 只有价格一栏, 但要考虑页面隐藏商品
         if self.driver.find_element_by_id('J_PromoPrice').get_attribute('style') == 'display: none;':
-            js_python = 'print()'
-            price_all = '原价'
+            # js_python = 'print()'
+            # price_all = '原价'
+            have_discount = False
+            price_all = self.driver.find_element_by_xpath("//dl[@id='J_StrPriceModBox']//span").text
         else:
+            #促销价js延迟加载问题, 有待解决, 可利用超时函数
+            #todo
             try:
                 price_all = self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text
             except:
                 time.sleep(1)
                 price_all = self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text
+            #判断价格是否有变动
             if '-' not in self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text:
-                    js_python = 'print()'
+                    # js_python = 'print()'
+                is_pricechange_of_spu = False
             else:
-                js_python = """action.move_to_element(self.driver.find_element_by_partial_link_text('立即购买')).perform()"""
-                print('需要每次点击之前都重新定位')
+                # js_python = """action.move_to_element(self.driver.find_element_by_partial_link_text('立即购买')).perform()"""
+                is_pricechange_of_spu = True
+        #获取所有图片标签,包括隐藏
         li_xpath_str = '//ul[@class="tm-clear J_TSaleProp tb-img"]//li'
         li_ele_list = self.driver.find_elements_by_xpath(li_xpath_str)
         #showif标识是否全部商品全都在页面上展示了出来
-        show_if = True
-        should_click = True
+        # show_if = True
+        # should_click = True
         for li_ele in li_ele_list:
             if li_ele.get_attribute('@class') == 'tb-out-of-stock':
-                show_if = False
-        if js_python == 'print()' and show_if:
+                is_all_show = False
+        # if js_python == 'print()' and show_if:
             #标识是否符合跳过点击的商品
+        if (is_all_show and is_pricechange_of_spu==False) or (is_all_show and have_discount==False):
             should_click = False
+
         for key_demo in dict_new["propertyPics"].keys():
             print(key_demo)
             if key_demo != "default":
+                #1,商品全部展示, 并且有促销价格, 但是促销价没发生变化,2, 商品全部展示,无促销价
                 if should_click == False:
-                    dict_new["propertyPics"][key_demo].append({'discount_price': price_all})
+                    dict_new["propertyPics"][key_demo].append({'discount_price': price_all, 'on_sale':'true'})
                     print(price_all)
-                    break
+                    continue
+                #获取style编码
                 key = key_demo.strip(';')
+                #用js进行遍历,从而进行点击
                 js = """
                 alist = document.querySelectorAll("li[data-value]");
                 for(i=0;i<alist.length;i++){
@@ -147,16 +168,17 @@ class Taobao_spider():
                         {alist[i].children[0].click()}
                         }
                 """ % key
+                #商品没有在页面上进行展示的情况,商品没有促销价
                 if self.driver.find_element_by_xpath('//li[@data-value="%s"]'%key).get_attribute('class') == 'tb-out-of-stock':
-                    dict_new["propertyPics"][key_demo].append({'discount_price': ''})
-
+                    dict_new["propertyPics"][key_demo].append({'discount_price': '','on_sale':'false'})
+                    continue
                 self.driver.execute_script(js)
                 discount_price = self.driver.find_element_by_xpath(
                     '//div[@class="tm-promo-price"]/span[1]').text
-                dict_new["propertyPics"][key_demo].append({'discount_price':discount_price})
+                dict_new["propertyPics"][key_demo].append({'discount_price':discount_price,'on_sale':'true'})
                 print(discount_price)
         text = json.dumps(dict_new)
-        print(text, file=self.f)
+        return text
 
     def start(self):
         #对页码进行遍历, 获取每一页的商品数量,并调用解析函数＜＜＜
@@ -169,3 +191,17 @@ class Taobao_spider():
             self.driver.execute_script(js_submit)
             goods_list = self.get_goods_count()
             self.get_detail_page(goods_list=goods_list)
+
+    def run(self):
+        print('run')
+        self.start()
+
+def run_spider(start_page, end_page):
+    tao_spider = Taobao_spider(start_page, end_page, keywords='T恤')
+    tao_spider.run()
+
+def main():
+    run_spider(5,6)
+
+if __name__ == '__main__':
+    main()
