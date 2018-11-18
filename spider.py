@@ -157,7 +157,8 @@ class Taobao_spider():
         is_all_show = True
         should_click = True
         # 第一次进入详情页面展示出来的促销价格, 少数商品并没有促销价, 只有价格一栏, 但要考虑页面隐藏商品
-        if self.driver.find_element_by_id('J_PromoPrice').get_attribute('style') == 'display: none;':
+        if self.driver.find_element_by_id('J_PromoPrice').get_attribute('style'):# == 'display: none;'
+
             # js_python = 'print()'
             # price_all = '原价'
             have_discount = False
