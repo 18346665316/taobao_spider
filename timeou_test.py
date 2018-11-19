@@ -14,6 +14,7 @@ def timeoutfunc(timeout, pythoncode, self):
                 code[0] = 1
             except:
                 print('页面加载超时')
+                return
         t1 = Thread(target=get_rusult, name='get_result')
         t1.setDaemon(True)
         t1.start()

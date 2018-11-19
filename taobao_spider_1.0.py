@@ -6,6 +6,8 @@ import re
 from selenium.webdriver.common.action_chains import ActionChains
 from multiprocessing import Process
 from timeou_test import timeoutfunc
+import sys
+
 
 class Taobao_spider():
     def __init__(self, start_page, end_page):
@@ -131,7 +133,7 @@ class Taobao_spider():
             try:
                 price_all = self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text
             except:
-                time.sleep(1)
+                time.sleep(2)
                 price_all = self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text
             if '-' not in self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text:
                     js_python = 'print()'
@@ -234,7 +236,10 @@ def main():
         for j in range(15,1,-1):
             print('等待', j, '秒')
             time.sleep(1)
-run_spider(4,5)
+params_list = sys.argv()
+run_spider(params_list[1],params_list[2])
+
+
 
 
 

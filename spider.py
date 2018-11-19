@@ -169,10 +169,11 @@ class Taobao_spider():
             try:
                 price_all = self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text
             except:
-                time.sleep(1)
+                time.sleep(3)
                 price_all = self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text
+            # price_all = self.get_discount_price_all()
             #判断价格是否有变动
-            if '-' not in self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text:
+            if '-' not in price_all:
                     # js_python = 'print()'
                 is_pricechange_of_spu = False
             else:
@@ -221,7 +222,15 @@ class Taobao_spider():
                 print(discount_price)
         text = json.dumps(dict_new)
         return text
-
+    # def get_discount_price_all(self):
+    #     price_all = None
+    #     if price_all is None:
+    #         try:
+    #             price_all = self.driver.find_element_by_xpath('//div[@class="tm-promo-price"]//span[1]').text
+    #         except:
+    #             time.sleep(1)
+    #             self.get_discount_price_all()
+    #     return price_all
     def start(self):
         #对页码进行遍历, 获取每一页的商品数量,并调用解析函数＜＜＜
         self.driver.set_page_load_timeout(8)

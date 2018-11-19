@@ -11,6 +11,7 @@ def a1(driver):
 
 def a2(driver):
     print('a2')
+    print(driver.title)
     # driver.stop_client()
     import time
     time.sleep(1)
